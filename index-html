@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DATEX II v3.7 — Comunitat Valenciana (Red de Carreteras y Congestión)</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --border-color: #2a2a2a;
+            --text-main: #e0e0e0;
+            --text-accent: #64b5f6;
+            --text-muted: #90caf9;
+            --table-header-bg: #15202b;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: monospace, system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 16px;
+        }
+
+        header {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 14px;
+            border-radius: 6px;
+            margin-bottom: 14px;
+        }
+
+        h1 {
+            color: var(--text-accent);
+            font-size: 1.1rem;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+        }
+
+        .step-box {
+            background-color: #15202b;
+            border: 1px dashed var(--text-accent);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 0.82rem;
+        }
+
+        .step-box a {
+            color: var(--text-accent);
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        input[type="file"], input[type="text"] {
+            background-color: #222;
+            color: var(--text-accent);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+        }
+
+        input[type="file"] { cursor: pointer; }
+        input[type="text"] { min-width: 260px; font-family: inherit; }
+
+        button {
+            background-color: #1b3a4b;
+            color: var(--text-accent);
+            border: 1px solid var(--border-color);
+            padding: 7px 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            font-family: inherit;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #2c5282;
+            border-color: var(--text-accent);
+        }
+
+        .status-bar {
+            margin-top: 10px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        @media (max-width: 1100px) {
+            .layout-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .table-container {
+            max-height: 52vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--panel-bg);
+        }
+
+        th, td {
+            padding: 6px 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.78rem;
+        }
+
+        th {
+            background-color: var(--table-header-bg);
+            color: var(--text-accent);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        tr:nth-child(even) { background-color: #181818; }
+        tr:hover { background-color: #252525; cursor: pointer; }
+
+        .type-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 0.72rem;
+            color: #000;
+        }
+
+        #map {
+            width: 100%;
+            height: 54vh;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: #1a1a1a;
+        }
+
+        .leaflet-control-layers {
+            background-color: #1e1e1e !important;
+            color: #e0e0e0 !important;
+            border: 1px solid #333 !important;
+        }
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background-color: #1e1e1e !important;
+            color: #e0e0e0 !important;
+            border: 1px solid #333;
+        }
+        .leaflet-popup-content b {
+            color: #64b5f6;
+        }
+
+        .legend-box {
+            background: rgba(30, 30, 30, 0.92);
+            border: 1px solid #333;
+            padding: 8px 10px;
+            font-size: 0.75rem;
+            color: #e0e0e0;
+            border-radius: 4px;
+            line-height: 1.4;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+            border: 1px solid #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Extractor DATEX II v3.7 — Comunitat Valenciana (+ Red de Carreteras y Congestión)</h1>
+        
+        <div class="step-box" id="stepBoxOrigen">
+            <strong>Origen de datos:</strong> <a href="https://nap.dgt.es/datex2/v3/dgt/SituationPublication/datex2_v37.xml" target="_blank" rel="noopener">https://nap.dgt.es/datex2/v3/dgt/SituationPublication/datex2_v37.xml</a><br>
+            <strong>Capas de carreteras:</strong> trazado de la red viaria (IGN / ICV).<br>
+            <strong>Congestión en tiempo real:</strong> teselas de flujo de tráfico de TomTom (no son datos de la DGT). Requieren una clave de API gratuita de TomTom: pégala abajo y pulsa «Aplicar clave». Se muestra sin necesidad de cargar el XML.
+        </div>
+
+        <div class="controls">
+            <input type="file" id="xmlFileInput" accept=".xml">
+            <button id="btnExport" onclick="exportarCSV()" style="display: none;">Descargar CSV Filtrado</button>
+            <input type="text" id="tomtomKeyInput" placeholder="Clave API de TomTom (congestión)" autocomplete="off" spellcheck="false">
+            <button id="btnTomtomKey" type="button">Aplicar clave</button>
+        </div>
+        <div class="status-bar" id="status">Estado: Selecciona el archivo XML local...</div>
+        <div class="status-bar" id="statusCongestion">Congestión: sin clave de TomTom, la capa de congestión no está activa.</div>
+    </header>
+
+    <div class="layout-grid">
+        <div class="panel">
+            <h3 style="margin: 0 0 8px 0; color: var(--text-accent); font-size: 0.9rem;">Incidencias y Balizas V16 en la CV</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Provincia</th>
+                            <th>Municipio</th>
+                            <th>Carretera</th>
+                            <th>PK</th>
+                            <th>Tipo / Categoría</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyData">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-muted);">
+                                Esperando archivo XML...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3 style="margin: 0 0 8px 0; color: var(--text-accent); font-size: 0.9rem;">Visor Cartográfico (Tramos y Red de Carreteras)</h3>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        // ============================================================
+        // MODO AUTOMÁTICO (solo si se sirve por http:// o https://)
+        // En file:// se mantiene el comportamiento manual original.
+        // ============================================================
+        const MODO_AUTO = (location.protocol === 'https:' || location.protocol === 'http:');
+        const URL_XML_DGT = 'https://nap.dgt.es/datex2/v3/dgt/SituationPublication/datex2_v37.xml';
+
+        // Opcional: puedes dejar tu clave de TomTom aquí. Si queda vacía, se usa la guardada en el navegador o la del campo de texto.
+        const TOMTOM_API_KEY = '';
+        const TOMTOM_KEY_STORAGE = 'tomtom_traffic_key';
+
+        const map = L.map('map').setView([39.4699, -0.3763], 9);
+
+        // Capas base cartográficas
+        const pnoaOrto = L.tileLayer.wms('https://www.ign.es/wms-inspire/pnoa-ma', {
+            layers: 'OI.OrthoimageCoverage',
+            format: 'image/jpeg',
+            transparent: false,
+            attribution: 'PNOA &copy; IGN'
+        });
+
+        const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri'
+        });
+
+        const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri'
+        });
+
+        pnoaOrto.addTo(map);
+
+        // --- CAPAS OVERLAY DE RED DE CARRETERAS (WMS) ---
+        const capaCarreterasIGN = L.tileLayer.wms('https://www.ign.es/wms-inspire/carreteras', {
+            layers: 'TN.RoadTransportNetwork.RoadLink',
+            format: 'image/png',
+            transparent: true,
+            version: '1.3.0',
+            attribution: 'Red Carreteras &copy; IGN / Ministerio'
+        });
+
+        const capaCarreterasICV = L.tileLayer.wms('https://terrasit.gva.es/wss/service/redes-transporte/wms', {
+            layers: 'carreteras_cv',
+            format: 'image/png',
+            transparent: true,
+            attribution: 'Red Carreteras &copy; ICV GVA'
+        });
+
+        capaCarreterasIGN.addTo(map);
+        capaCarreterasICV.addTo(map);
+
+        const baseMaps = {
+            "PNOA Ortofoto (IGN)": pnoaOrto,
+            "Esri Satélite": esriSat,
+            "Esri Callejero": esriStreet
+        };
+
+        const overlayMaps = {
+            "🛣️ Trazado de carreteras (IGN)": capaCarreterasIGN,
+            "🌐 Red Autonómica CV (ICV)": capaCarreterasICV
+        };
+
+        const layersControl = L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
+
+        // --- CAPA DE CONGESTIÓN EN TIEMPO REAL (TomTom Raster Flow Tiles v4, estilo relative0) ---
+        let capaCongestion = null;
+        let avisoTileErrorMostrado = false;
+
+        function leerClaveGuardada() {
+            if (TOMTOM_API_KEY) return TOMTOM_API_KEY;
+            try { return localStorage.getItem(TOMTOM_KEY_STORAGE) || ''; } catch (e) { return ''; }
+        }
+
+        function guardarClave(key) {
+            try { localStorage.setItem(TOMTOM_KEY_STORAGE, key); } catch (e) { /* almacenamiento no disponible */ }
+        }
+
+        function aplicarCapaCongestion(key) {
+            const statusCong = document.getElementById('statusCongestion');
+
+            if (capaCongestion) {
+                map.removeLayer(capaCongestion);
+                layersControl.removeLayer(capaCongestion);
+                capaCongestion = null;
+            }
+
+            if (!key) {
+                statusCong.innerText = 'Congestión: sin clave de TomTom, la capa de congestión no está activa.';
+                return;
+            }
+
+            avisoTileErrorMostrado = false;
+            const url = 'https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=' + encodeURIComponent(key);
+
+            capaCongestion = L.tileLayer(url, {
+                maxZoom: 22,
+                opacity: 0.9,
+                zIndex: 10,
+                attribution: 'Tráfico &copy; TomTom'
+            });
+
+            capaCongestion.on('tileerror', function() {
+                if (avisoTileErrorMostrado) return;
+                avisoTileErrorMostrado = true;
+                statusCong.innerText = 'Congestión: no se pudieron cargar teselas de TomTom (revisa que la clave sea válida y que no se haya agotado la cuota).';
+            });
+
+            capaCongestion.addTo(map);
+            layersControl.addOverlay(capaCongestion, '🚦 Congestión en tiempo real (TomTom)');
+            statusCong.innerText = 'Congestión: capa de TomTom activa (colores relativos a la velocidad en flujo libre).';
+        }
+
+        document.getElementById('btnTomtomKey').addEventListener('click', function() {
+            const key = document.getElementById('tomtomKeyInput').value.trim();
+            if (key) guardarClave(key);
+            aplicarCapaCongestion(key);
+        });
+
+        // Se activa al abrir la página, sin esperar al XML
+        (function iniciarCongestion() {
+            const key = leerClaveGuardada();
+            document.getElementById('tomtomKeyInput').value = key;
+            aplicarCapaCongestion(key);
+        })();
+
+        let vectorLayer = L.layerGroup().addTo(map);
+
+        // Leyenda
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function() {
+            const div = L.DomUtil.create('div', 'legend-box');
+            div.innerHTML = `
+                <div style="font-weight:bold; margin-bottom:4px;">Leyenda de Tipos</div>
+                <div class="legend-item"><div class="legend-color" style="background:#ff00ff;"></div>🚗 Baliza V16 / Vehículo Detenido</div>
+                <div class="legend-item"><div class="legend-color" style="background:#ff1744;"></div>💥 Accidente / Retención Grave</div>
+                <div class="legend-item"><div class="legend-color" style="background:#ff9100;"></div>⚠️ Congestión / Tráfico Denso</div>
+                <div class="legend-item"><div class="legend-color" style="background:#ffd600;"></div>🚧 Obras / Mantenimiento</div>
+                <div class="legend-item"><div class="legend-color" style="background:#00e5ff;"></div>🌧️ Meteorología Adversa</div>
+                <div class="legend-item"><div class="legend-color" style="background:#00e676;"></div>ℹ️ Aviso General</div>
+                <div style="margin-top:6px; font-size:0.7rem; color:#90caf9;">Líneas de color sobre las carreteras: flujo de tráfico (TomTom)</div>
+            `;
+            return div;
+        };
+        legend.addTo(map);
+
+        const CV_BOUNDS = { minLat: 37.85, maxLat: 40.80, minLon: -1.55, maxLon: 0.60 };
+
+        function estaEnComunitatValenciana(lat, lon) {
+            return (lat >= CV_BOUNDS.minLat && lat <= CV_BOUNDS.maxLat &&
+                    lon >= CV_BOUNDS.minLon && lon <= CV_BOUNDS.maxLon);
+        }
+
+        // Escapa texto procedente del XML antes de insertarlo como HTML
+        function esc(s) {
+            return String(s === null || s === undefined ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function obtenerClasificacionIncidencia(tipoRaw, textoCompleto) {
+            const t = (tipoRaw + ' ' + textoCompleto).toLowerCase();
+            
+            if (t.includes('v16') || t.includes('stoppedvehicle') || t.includes('stalledvehicle') || t.includes('vehículodetenido') || t.includes('vehiculo detenido') || t.includes('parado') || t.includes('averia')) {
+                return { categoria: 'Baliza V16 / Vehículo Detenido', color: '#ff00ff' };
+            } else if (t.includes('accident') || t.includes('collision') || t.includes('crash')) {
+                return { categoria: 'Accidente', color: '#ff1744' };
+            } else if (t.includes('congestion') || t.includes('queue') || t.includes('slow') || t.includes('retencion')) {
+                return { categoria: 'Congestión / Tráfico', color: '#ff9100' };
+            } else if (t.includes('roadworks') || t.includes('maintenance') || t.includes('construction') || t.includes('obras')) {
+                return { categoria: 'Obras / Mantenimiento', color: '#ffd600' };
+            } else if (/\bwind/.test(t) || /\bice/.test(t) || t.includes('weather') || t.includes('snow') || t.includes('flood') || t.includes('lluvia')) {
+                return { categoria: 'Meteorología Adversa', color: '#00e5ff' };
+            }
+            return { categoria: 'Incidencia / Aviso General', color: '#00e676' };
+        }
+
+        const VALENCIA_KEYWORDS = [
+            'valencia', 'valència', 'v-30', 'v-31', 'v-21', 'v-11', 'cv-35', 'cv-30', 'cv-50', 'cv-36', 
+            'alboraia', 'sagunt', 'sagunto', 'xativa', 'xàtiva', 'gandia', 'gandía', 'torrent', 'paterna', 'alzira', 'requena', 'utiel', 'silla', 'sollana', 'cullera'
+        ];
+        
+        const CASTELLON_KEYWORDS = [
+            'castellon', 'castellón', 'castelló', 'cs-22', 'cv-10', 'cv-13', 'cv-14', 'cv-15', 'cv-16', 'cv-18', 'cv-20',
+            'vila-real', 'villarreal', 'borriana', 'burriana', 'benicassim', 'benicàssim', 'vinaros', 'vinaròs', 'peniscola', 'peñíscola', 'alcala de xivert', 'alcalà de xivert', 'oropesa', 'nules', 'onda'
+        ];
+        
+        const ALICANTE_KEYWORDS = [
+            'alicante', 'alacant', 'a-31', 'a-70', 'a-77', 'a-79', 'cv-80', 'cv-84', 'cv-90', 'cv-95',
+            'elche', 'elx', 'torrevieja', 'oriola', 'orihuela', 'benidorm', 'alcoi', 'alcoy', 'elda', 'petrer', 'denia', 'dénia', 'javea', 'xàbia', 'villena', 'san vicente', 'sant vicent', 'calpe', 'calp'
+        ];
+
+        const CHARS_PALABRA = 'a-z0-9áéíóúüñçàèòï';
+        function crearMatchers(lista) {
+            return lista.map(kw => ({
+                kw: kw,
+                re: new RegExp('(^|[^' + CHARS_PALABRA + '])' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^' + CHARS_PALABRA + '])')
+            }));
+        }
+        const MATCH_VALENCIA = crearMatchers(VALENCIA_KEYWORDS);
+        const MATCH_CASTELLON = crearMatchers(CASTELLON_KEYWORDS);
+        const MATCH_ALICANTE = crearMatchers(ALICANTE_KEYWORDS);
+        const MATCH_TODOS = [...MATCH_VALENCIA, ...MATCH_CASTELLON, ...MATCH_ALICANTE];
+
+        function coincideAlguno(matchers, textoLower) {
+            return matchers.some(m => m.re.test(textoLower));
+        }
+
+        function provinciaPorCodigo(rec, recXmlText) {
+            const els = rec.getElementsByTagName('*');
+            for (let i = 0; i < els.length; i++) {
+                if (/provinc|district|^ine/i.test(els[i].localName)) {
+                    const v = els[i].textContent.trim();
+                    if (v === '46') return 'Valencia';
+                    if (v === '12') return 'Castellón';
+                    if (v === '03' || v === '3') return 'Alicante';
+                }
+            }
+            const m = recXmlText.match(/provincia:\s*(46|12|03)\b/i);
+            if (m) return m[1] === '46' ? 'Valencia' : (m[1] === '12' ? 'Castellón' : 'Alicante');
+            return null;
+        }
+
+        let datosExtraidos = [];
+
+        // ============================================================
+        // FUNCIÓN CENTRAL DE PROCESAMIENTO (reutilizada por fetch y por FileReader)
+        // ============================================================
+        function procesarXML(xmlText, nombreArchivo) {
+            const statusEl = document.getElementById('status');
+
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+
+                if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+                    throw new Error('El archivo no es un XML válido.');
+                }
+
+                const allElements = xmlDoc.getElementsByTagName('*');
+                const records = [];
+
+                for (let i = 0; i < allElements.length; i++) {
+                    if (allElements[i].localName === 'situationRecord') {
+                        records.push(allElements[i]);
+                    }
+                }
+
+                datosExtraidos = [];
+                vectorLayer.clearLayers();
+                const bounds = [];
+                let descartadosFuera = 0;
+                let cuentaBalizas = 0;
+
+                records.forEach(rec => {
+                    const recXmlText = new XMLSerializer().serializeToString(rec);
+                    const recTextLower = recXmlText.toLowerCase();
+
+                    const findFirstTagValue = (node, tagNames) => {
+                        const matches = node.getElementsByTagName('*');
+                        for (let m of matches) {
+                            if (tagNames.includes(m.localName) && m.textContent.trim() !== '') {
+                                return m.textContent.trim();
+                            }
+                        }
+                        return '---';
+                    };
+
+                    let latitud = findFirstTagValue(rec, ['latitude', 'lat', 'pointCoordinatesLatitude']);
+                    let longitud = findFirstTagValue(rec, ['longitude', 'lon', 'pointCoordinatesLongitude']);
+
+                    if (latitud === '---' || longitud === '---') {
+                        const matchLat = recXmlText.match(/<(?:\w+:)?latitude[^>]*>([^<]+)<\/(?:\w+:)?latitude>/i) || recXmlText.match(/lat["']?\s*:\s*["']?([0-9.-]+)/i);
+                        const matchLon = recXmlText.match(/<(?:\w+:)?longitude[^>]*>([^<]+)<\/(?:\w+:)?longitude>/i) || recXmlText.match(/lon["']?\s*:\s*["']?([0-9.-]+)/i);
+                        if (matchLat) latitud = matchLat[1].trim();
+                        if (matchLon) longitud = matchLon[1].trim();
+                    }
+
+                    const latNum = parseFloat(latitud);
+                    const lonNum = parseFloat(longitud);
+                    const tieneCoords = !isNaN(latNum) && !isNaN(lonNum);
+
+                    let prov = provinciaPorCodigo(rec, recXmlText);
+
+                    if (!prov) {
+                        if (coincideAlguno(MATCH_VALENCIA, recTextLower)) prov = 'Valencia';
+                        else if (coincideAlguno(MATCH_CASTELLON, recTextLower)) prov = 'Castellón';
+                        else if (coincideAlguno(MATCH_ALICANTE, recTextLower)) prov = 'Alicante';
+                    }
+
+                    if (!prov && tieneCoords && estaEnComunitatValenciana(latNum, lonNum)) {
+                        prov = 'CV (sin provincia)';
+                    }
+
+                    if (prov) {
+                        if (tieneCoords && !estaEnComunitatValenciana(latNum, lonNum)) {
+                            descartadosFuera++;
+                            return;
+                        }
+
+                        let municipio = findFirstTagValue(rec, [
+                            'townName', 'cityName', 'locationName', 'areaName', 'tpegLocNodeName', 'descriptor'
+                        ]);
+
+                        if (municipio === '---') {
+                            for (let mt of MATCH_TODOS) {
+                                if (!mt.kw.includes('-') && mt.re.test(recTextLower)) {
+                                    municipio = mt.kw.charAt(0).toUpperCase() + mt.kw.slice(1);
+                                    break;
+                                }
+                            }
+                        }
+
+                        let carretera = findFirstTagValue(rec, [
+                            'roadNumber', 'nationalRoadNumber', 'roadIdentifier', 'roadName', 'specificLocation'
+                        ]);
+
+                        if (carretera === '---') {
+                            const matchRoad = recXmlText.match(/\b([A-Z]{1,3}-\d{1,4})\b/i);
+                            if (matchRoad) carretera = matchRoad[1].toUpperCase();
+                        }
+
+                        let pkStart = findFirstTagValue(rec, ['startPointNumber', 'kilometerPoint', 'distanceFromOrigin']);
+                        let pkEnd = findFirstTagValue(rec, ['endPointNumber']);
+                        let pk = '---';
+                        if (pkStart !== '---') {
+                            pk = (pkEnd !== '---' && pkEnd !== pkStart) ? `${pkStart} - ${pkEnd}` : `${pkStart}`;
+                        }
+
+                        let sentido = findFirstTagValue(rec, ['directionBound', 'directionRelative', 'direction', 'tpegDirection']);
+                        let tipoRaw = findFirstTagValue(rec, [
+                            'incidentType', 'causeType', 'abnormalTrafficType', 'accidentType', 
+                            'generalNetworkManagementType', 'roadOrCarriagewayOrLaneManagementType'
+                        ]);
+
+                        const clasificacion = obtenerClasificacionIncidencia(tipoRaw, recXmlText);
+                        if (clasificacion.categoria.includes('Baliza V16')) cuentaBalizas++;
+
+                        datosExtraidos.push({
+                            provincia: prov,
+                            municipio: municipio,
+                            carretera: carretera,
+                            pk: pk,
+                            sentido: sentido,
+                            tipo: clasificacion.categoria,
+                            color: clasificacion.color,
+                            latitud: tieneCoords ? latNum : '---',
+                            longitud: tieneCoords ? lonNum : '---'
+                        });
+
+                        if (tieneCoords) {
+                            const esV16 = clasificacion.categoria.includes('Baliza V16');
+                            const circleMarker = L.circleMarker([latNum, lonNum], {
+                                radius: esV16 ? 9 : 7,
+                                fillColor: clasificacion.color,
+                                color: '#ffffff',
+                                weight: esV16 ? 2.5 : 1.5,
+                                opacity: 1,
+                                fillOpacity: 0.95
+                            }).bindPopup(`
+                                <b>Categoría:</b> ${esc(clasificacion.categoria)}<br>
+                                <b>Carretera:</b> ${esc(carretera)} (PK: ${esc(pk)})<br>
+                                <b>Provincia:</b> ${esc(prov)} (${esc(municipio)})<br>
+                                <b>Sentido:</b> ${esc(sentido)}
+                            `);
+
+                            vectorLayer.addLayer(circleMarker);
+                            bounds.push([latNum, lonNum]);
+                        }
+                    }
+                });
+
+                const tbody = document.getElementById('tbodyData');
+                tbody.innerHTML = '';
+
+                if (datosExtraidos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No se encontraron incidencias activas en la Comunitat Valenciana.</td></tr>';
+                    document.getElementById('btnExport').style.display = 'none';
+                    statusEl.innerText = `Estado: Procesado. 0 incidencias (${records.length} registros leídos, ${descartadosFuera} descartados por estar fuera de la CV).`;
+                } else {
+                    datosExtraidos.forEach((row) => {
+                        const tr = document.createElement('tr');
+                        if (typeof row.latitud === 'number' && typeof row.longitud === 'number') {
+                            tr.onclick = () => {
+                                map.setView([row.latitud, row.longitud], 15);
+                            };
+                        }
+
+                        tr.innerHTML = `
+                            <td><strong>${esc(row.provincia)}</strong></td>
+                            <td style="color: var(--text-accent);">${esc(row.municipio)}</td>
+                            <td style="color: #69f0ae; font-weight: bold;">${esc(row.carretera)}</td>
+                            <td>${esc(row.pk)}</td>
+                            <td><span class="type-badge" style="background-color: ${esc(row.color)};">${esc(row.tipo)}</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    document.getElementById('btnExport').style.display = 'inline-block';
+                    statusEl.innerText = `Estado: ¡Éxito! ${datosExtraidos.length} incidencias en total (${cuentaBalizas} Balizas V16/vehículos detenidos localizados, ${descartadosFuera} descartadas por estar fuera de la CV).`;
+
+                    if (bounds.length > 0) {
+                        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 13 });
+                    }
+                }
+
+            } catch (err) {
+                console.error(err);
+                statusEl.innerText = `Estado: Error al parsear el XML: ${err.message}`;
+            }
+        }
+
+        // ============================================================
+        // MODO MANUAL (file://) — igual que antes
+        // ============================================================
+        if (!MODO_AUTO) {
+            document.getElementById('xmlFileInput').addEventListener('change', function(evt) {
+                const file = evt.target.files[0];
+                if (!file) return;
+
+                const statusEl = document.getElementById('status');
+                statusEl.innerText = `Estado: Procesando ${file.name}...`;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    procesarXML(e.target.result, file.name);
+                };
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+
+        // ============================================================
+        // MODO AUTOMÁTICO (http:// o https://)
+        // ============================================================
+        if (MODO_AUTO) {
+            // Ocultar recuadro de origen de datos y selector de archivo
+            const stepBox = document.getElementById('stepBoxOrigen');
+            if (stepBox) stepBox.style.display = 'none';
+            const fileInput = document.getElementById('xmlFileInput');
+            if (fileInput) fileInput.style.display = 'none';
+
+            const statusEl = document.getElementById('status');
+            statusEl.innerText = 'Estado: Descargando XML de la DGT…';
+
+            fetch(URL_XML_DGT)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status} — ${response.statusText}`);
+                    }
+                    return response.text();
+                })
+                .then(xmlText => {
+                    statusEl.innerText = 'Estado: XML descargado, procesando…';
+                    procesarXML(xmlText, 'datex2_v37.xml');
+                })
+                .catch(err => {
+                    console.error('Error al descargar el XML de la DGT:', err);
+                    statusEl.innerText = `Estado: No se pudo descargar el XML de la DGT (${err.message}). ` +
+                        'Puede deberse a un problema de red o a que el servidor no permite peticiones CORS desde este origen. ' +
+                        'Si el problema persiste, abre la página en local (file://) y carga el archivo manualmente.';
+                    document.getElementById('tbodyData').innerHTML =
+                        '<tr><td colspan="5" style="text-align: center; color: #ff1744;">Error al descargar el XML. Revisa la consola o carga el archivo manualmente en local.</td></tr>';
+                });
+        }
+
+        // ============================================================
+        // EXPORTAR CSV (sin cambios)
+        // ============================================================
+        function exportarCSV() {
+            if (datosExtraidos.length === 0) return;
+
+            let csvContent = "Provincia,Municipio,Carretera,Punto_Kilometrico,Sentido,Tipo_Incidencia,Latitud,Longitud\n";
+
+            datosExtraidos.forEach(row => {
+                const clean = (str) => `"${String(str === null || str === undefined ? '' : str).replace(/"/g, '""')}"`;
+                const linea = [
+                    clean(row.provincia),
+                    clean(row.municipio),
+                    clean(row.carretera),
+                    clean(row.pk),
+                    clean(row.sentido),
+                    clean(row.tipo),
+                    clean(row.latitud),
+                    clean(row.longitud)
+                ].join(",");
+                csvContent += linea + "\n";
+            });
+
+            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            
+            const fechaStr = new Date().toISOString().slice(0,10);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `incidencias_y_balizas_v16_cv_${fechaStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
